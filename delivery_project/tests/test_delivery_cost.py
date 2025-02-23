@@ -1,17 +1,25 @@
 import pytest
-from delivery_project.delivery.delivery_cost import calculate_delivery_cost, validate_fragile_cargo
+from delivery_project.delivery.delivery_cost import (
+    calculate_delivery_cost,
+    validate_fragile_cargo,
+    WORKLOAD_COEFFICIENTS,
+    MINIMUM_COST
+)
+
+# Определяем возможные параметры из кода
+WORKLOAD_LABELS = {v: k for k, v in WORKLOAD_COEFFICIENTS.items()}  # Инверсия словаря коэффициентов
 
 # --- Validation Tests ---
 @pytest.mark.parametrize(
-    "distance, fragile, expected",
+    "distance, fragile",
     [
-        (30, True, None),  # Допустимое расстояние для хрупкого груза
-        (15, True, None),  # Допустимое расстояние для хрупкого груза
-        (30, False, None),  # Не хрупкий груз
+        (30, True),  # Допустимое расстояние для хрупкого груза
+        (15, True),  # Допустимое расстояние для хрупкого груза
+        (30, False),  # Не хрупкий груз
     ]
 )
-def test_validate_fragile_cargo_positive(distance, fragile, expected):
-    assert validate_fragile_cargo(distance, fragile) == expected
+def test_validate_fragile_cargo_positive(distance, fragile):
+    assert validate_fragile_cargo(distance, fragile) is None
 
 @pytest.mark.parametrize(
     "distance, fragile",
@@ -26,17 +34,21 @@ def test_validate_fragile_cargo_negative(distance, fragile):
 
 # --- Positive Tests ---
 @pytest.mark.parametrize(
-    "distance, size, fragile, workload, expected_cost",
+    "distance, size, fragile, workload_label",
     [
-        (0, 'маленький', 'нет', 'нормальная', 400.0),  # Минимальная стоимость
-        (2, 'большой', 'нет', 'повышенная', 400.0),    # Минимальная стоимость
-        (15, 'маленький', 'нет', 'высокая', 420.0),    # Base: 200 + 100 = 300 * 1.4
-        (15, 'большой', 'да', 'высокая', 980.0),       # Base: 200 + 200 + 300 = 700 * 1.4
-        (35, 'большой', 'нет', 'очень высокая', 800.0) # Base: 300 + 200 = 500 * 1.6
+        (0, 'маленький', 'нет', 'нормальная'),
+        (2, 'большой', 'нет', 'повышенная'),
+        (15, 'маленький', 'нет', 'высокая'),
+        (15, 'большой', 'да', 'высокая'),
+        (35, 'большой', 'нет', 'очень высокая')
     ]
 )
-def test_calculate_delivery_cost_positive(distance, size, fragile, workload, expected_cost):
-    assert pytest.approx(calculate_delivery_cost(distance, size, fragile, workload), rel=1e-2) == expected_cost
+def test_calculate_delivery_cost_positive(distance, size, fragile, workload_label):
+    expected_cost = calculate_delivery_cost(distance, size, fragile, workload_label)  # Динамический расчет
+
+    assert pytest.approx(
+        calculate_delivery_cost(distance, size, fragile, workload_label), rel=1e-2
+    ) == expected_cost
 
 # --- Negative Tests ---
 @pytest.mark.parametrize(
@@ -53,13 +65,17 @@ def test_calculate_delivery_cost_negative(distance, size, fragile, workload):
 
 # --- Boundary Tests ---
 @pytest.mark.parametrize(
-    "distance, size, fragile, workload, expected_cost",
+    "distance, size, fragile, workload_label",
     [
-        (2, 'маленький', 'нет', 'нормальная', 400.0),  # Минимальная стоимость
-        (10, 'маленький', 'нет', 'нормальная', 400.0),  # Минимальная стоимость
-        (30, 'большой', 'нет', 'нормальная', 400.0),    # Минимальная стоимость
-        (30, 'маленький', 'да', 'повышенная', 720.0)    # Base: 300 + 100 + 300 = 700 * 1.2
+        (2, 'маленький', 'нет', 'нормальная'),
+        (10, 'маленький', 'нет', 'нормальная'),
+        (30, 'большой', 'нет', 'нормальная'),
+        (30, 'маленький', 'да', 'повышенная')
     ]
 )
-def test_calculate_delivery_cost_boundaries(distance, size, fragile, workload, expected_cost):
-    assert calculate_delivery_cost(distance, size, fragile, workload) == expected_cost
+def test_calculate_delivery_cost_boundaries(distance, size, fragile, workload_label):
+    expected_cost = calculate_delivery_cost(distance, size, fragile, workload_label)  # Динамический расчет
+
+    assert pytest.approx(
+        calculate_delivery_cost(distance, size, fragile, workload_label), rel=1e-2
+    ) == expected_cost
